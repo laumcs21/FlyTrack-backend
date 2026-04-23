@@ -1,8 +1,9 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Model.Vuelo;
-import com.flytrack.Service.VueloService;
+import com.flytrack.Persistence.Model.Vuelo;
+import com.flytrack.Business.Service.VueloService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -31,9 +32,12 @@ public class VueloController {
     }
 
     @PutMapping("/{id}")
-    public Vuelo actualizarVuelo(@PathVariable Long id, @RequestBody Vuelo vuelo) {
-        return vueloServicio.actualizarVuelo(id, vuelo);
-    }
+    public ResponseEntity<Vuelo> actualizarVuelo(
+            @PathVariable Long id,
+            @RequestBody Vuelo vueloActualizado) {
+        Vuelo vuelo = vueloServicio.actualizarVuelo(id, vueloActualizado);
+        return ResponseEntity.ok(vuelo);
+        }
 
     @DeleteMapping("/{id}")
     public void eliminarVuelo(@PathVariable Long id) {

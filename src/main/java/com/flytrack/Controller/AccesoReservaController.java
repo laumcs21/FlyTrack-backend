@@ -1,8 +1,8 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Dto.VerificarCodigoRequest;
-import com.flytrack.Model.Reserva;
-import com.flytrack.Service.AccesoReservaService;
+import com.flytrack.Business.Dto.VerificarCodigoRequest;
+import com.flytrack.Persistence.Model.Reserva;
+import com.flytrack.Business.Service.AccesoReservaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

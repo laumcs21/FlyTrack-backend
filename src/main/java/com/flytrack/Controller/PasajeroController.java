@@ -1,7 +1,7 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Model.Pasajero;
-import com.flytrack.Service.PasajeroService;
+import com.flytrack.Persistence.Model.Pasajero;
+import com.flytrack.Business.Service.PasajeroService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

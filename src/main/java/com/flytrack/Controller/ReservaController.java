@@ -1,10 +1,10 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Dto.ReservaDto;
-import com.flytrack.Dto.ReservaRequest;
-import com.flytrack.Mapper.ReservaMapper;
-import com.flytrack.Model.Reserva;
-import com.flytrack.Service.ReservaService;
+import com.flytrack.Business.Dto.ReservaDto;
+import com.flytrack.Business.Dto.ReservaRequest;
+import com.flytrack.Persistence.Mapper.ReservaMapper;
+import com.flytrack.Persistence.Model.Reserva;
+import com.flytrack.Business.Service.ReservaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;

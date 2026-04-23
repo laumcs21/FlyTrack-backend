@@ -1,8 +1,8 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Dto.ReporteEquipajePeticion;
-import com.flytrack.Model.ReporteEquipaje;
-import com.flytrack.Service.ReporteEquipajeService;
+import com.flytrack.Business.Dto.ReporteEquipajePeticion;
+import com.flytrack.Persistence.Model.ReporteEquipaje;
+import com.flytrack.Business.Service.ReporteEquipajeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,7 +1,7 @@
 package com.flytrack.Controller;
 
-import com.flytrack.Model.Notificacion;
-import com.flytrack.Service.NotificacionService;
+import com.flytrack.Persistence.Model.Notificacion;
+import com.flytrack.Business.Service.NotificacionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
