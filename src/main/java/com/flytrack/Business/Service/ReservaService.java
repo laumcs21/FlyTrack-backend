@@ -44,12 +44,12 @@ public class ReservaService {
 
         List<Reserva> reservasExistentes = reservaRepositorio.findByVueloId(vuelo.getId());
 
-        // 🔥 SET de documentos ya registrados en este vuelo
+        // 🔥 documentos ya usados en este vuelo
         Set<String> documentosEnVuelo = new HashSet<>();
 
         for (Reserva r : reservasExistentes) {
 
-            // 🔹 quitar asientos ocupados
+            // quitar asientos ocupados
             if (r.getNumeroAsiento() != null) {
                 try {
                     int ocupado = Integer.parseInt(r.getNumeroAsiento());
@@ -57,7 +57,7 @@ public class ReservaService {
                 } catch (NumberFormatException ignored) {}
             }
 
-            // 🔹 guardar documentos ya usados en este vuelo
+            // guardar documentos ya usados
             if (r.getPasajero() != null && r.getPasajero().getNumeroDocumento() != null) {
                 documentosEnVuelo.add(r.getPasajero().getNumeroDocumento());
             }
@@ -73,15 +73,20 @@ public class ReservaService {
 
         for (PasajeroDTO p : request.getPasajeros()) {
 
-            // 🔥 VALIDACIÓN CORRECTA
             if (documentosEnVuelo.contains(p.getDocumento())) {
                 throw new RuntimeException(
                         "El documento " + p.getDocumento() + " ya tiene una reserva en este vuelo"
                 );
             }
 
-            Pasajero pasajero = pasajeroMapper.toEntity(p);
-            pasajeroRepositorio.save(pasajero);
+            Pasajero pasajero = pasajeroRepositorio
+                    .findByNumeroDocumento(p.getDocumento())
+                    .map(existente -> {
+                        existente.setCorreo(p.getEmail());
+                        existente.setNombreCompleto(p.getNombre());
+                        return pasajeroRepositorio.save(existente);
+                    })
+                    .orElseGet(() -> pasajeroRepositorio.save(pasajeroMapper.toEntity(p)));
 
             String asientoAsignado = String.valueOf(asientosDisponibles.get(index++));
 
@@ -100,7 +105,6 @@ public class ReservaService {
 
         return reservas;
     }
-
     public List<Reserva> obtenerReservasPorPasajero(Long pasajeroId) {
         return reservaRepositorio.findByPasajeroId(pasajeroId);
     }
