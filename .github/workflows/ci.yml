@@ -1,48 +1,81 @@
-name: 🔄 CI - Build & Test
+name: 🚀 CD - Deploy Flytrack Backend
 
 on:
   push:
-    branches: [ develop, main ]
-  pull_request:
-    branches: [ develop, main ]
-  workflow_dispatch:  # Permitir trigger manual
+    branches: [ main ]
+  workflow_dispatch:
 
 env:
-  JAVA_VERSION: '21'
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  SERVICE_NAME: flytrack-backend
+  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flytrack-images
 
 jobs:
-  build-and-test:
-    name: 🛠️ Build & Unit Tests
+  deploy:
+    name: 🎯 Deploy to Cloud Run
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    environment: production
     
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
+
+      - name: 🔐 Authenticate to Google Cloud via OIDC
+        uses: google-github-actions/auth@v2
         with:
-          fetch-depth: 0
+          workload_identity_provider: 'projects/272814233394/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'flytrack-github-deployer@flytrack-494515.iam.gserviceaccount.com'
+          token_format: 'access_token'
 
-      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: 'maven'
+      - name: 🛠️ Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: 🔐 Setup Maven
-        uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: 3.9
+      - name: 🐳 Configure Docker for GAR
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
-      - name: 🏗️ Build with Maven
-        run: ./mvnw clean compile -B
+      - name: 🏷️ Generate image tag
+        id: image
+        run: |
+          TAG="${{ env.ARTIFACT_REGISTRY }}/flytrack-backend:${{ github.sha }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "short_sha=${{ github.sha::7 }}" >> $GITHUB_OUTPUT
 
-      - name: 🧪 Run Unit Tests
-        run: ./mvnw test -B
+      - name: 🐳 Build and Push Docker Image
+        run: |
+          docker build -t ${{ steps.image.outputs.tag }} .
+          docker push ${{ steps.image.outputs.tag }}
 
-      - name: 📦 Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: flytrack-jar
-          path: target/*.jar
-          retention-days: 1
+      - name: 🚀 Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ steps.image.outputs.tag }} \
+            --region=${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --memory=1Gi \
+            --cpu=1 \
+            --timeout=300 \
+            --port=8080 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,SPRING_DATASOURCE_URL=jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres,SPRING_DATASOURCE_USERNAME=postgres.bajdizxoykudmiuscebu,SPRING_MAIL_USERNAME=flytrack8@gmail.com,APP_MAIL_FROM=flytrack8@gmail.com" \
+            --set-secrets="SPRING_DATASOURCE_PASSWORD=flytrack-db-password:latest,BREVO_API_KEY=flytrack-brevo-api-key:latest,SPRING_MAIL_PASSWORD=flytrack-mail-password:latest,APP_JWT_SECRET=flytrack-jwt-secret:latest" \
+            --update-labels="app=flytrack,env=prod,commit-sha=${{ steps.image.outputs.short_sha }},deployed-by=github-actions"
+
+      - name: 🧪 Verify deployment
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.GCP_REGION }} \
+            --format="value(status.url)")
+          echo "🔗 Service URL: $SERVICE_URL"
+          
+          for i in {1..30}; do
+            if curl -sf "$SERVICE_URL/actuator/health" | jq -e '.status == "UP"' > /dev/null; then
+              echo "✅ Service is healthy"
+              exit 0
+            fi
+            echo "⏳ Waiting for service... ($i/30)"
+            sleep 10
+          done
+          echo "❌ Service failed to become healthy"
+          exit 1
