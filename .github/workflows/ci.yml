@@ -39,11 +39,12 @@ jobs:
         run: |
           TAG="${{ env.ARTIFACT_REGISTRY }}/flytrack-backend:${{ github.sha }}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "short_sha=${{ github.sha::7 }}" >> $GITHUB_OUTPUT
+          # ✅ Usar variable de entorno GITHUB_SHA con sintaxis bash
+          echo "short_sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
       - name: 🐳 Build and Push Docker Image
         run: |
-          docker build -t ${{ steps.image.outputs.tag }} .
+          docker build --pull -t ${{ steps.image.outputs.tag }} .
           docker push ${{ steps.image.outputs.tag }}
 
       - name: 🚀 Deploy to Cloud Run
