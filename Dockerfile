@@ -1,16 +1,16 @@
-# ===== STAGE 1: Build =====
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# ===== STAGE 1: Build con Java 21 =====
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
 # Copiar solo archivos de dependencias primero (cache de capas)
 COPY pom.xml .
 COPY src ./src
 
-# Compilar la aplicación
-RUN mvn clean package -DskipTests
+# Compilar la aplicación (sin tests para velocidad)
+RUN mvn clean package -DskipTests -B
 
-# ===== STAGE 2: Runtime ligero =====
-FROM eclipse-temurin:17-jre-slim AS runner
+# ===== STAGE 2: Runtime ligero con JRE =====
+FROM eclipse-temurin:21-jre AS runner
 WORKDIR /app
 
 # Crear usuario no-root para seguridad
@@ -20,9 +20,9 @@ USER spring:spring
 # Copiar solo el JAR compilado desde el stage builder
 COPY --from=builder --chown=spring:spring /app/target/*.jar app.jar
 
-# Health check
+# Health check (wget está disponible en eclipse-temurin)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
 
 # Exponer puerto
 EXPOSE 8080
