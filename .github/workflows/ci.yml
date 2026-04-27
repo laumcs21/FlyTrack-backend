@@ -21,7 +21,7 @@ jobs:
   deploy:
     name: 🎯 Deploy to Cloud Run
     runs-on: ubuntu-latest
-    environment: production  # Requiere aprobación si configuras environment protection rules
+    environment: production
     
     steps:
       # ===== 1. Checkout del código =====
@@ -56,8 +56,9 @@ jobs:
       # ===== 6. Build y Push de la imagen Docker =====
       - name: 🐳 Build and Push Docker Image
         run: |
-          # ✅ --pull fuerza descargar imágenes base frescas (evita caché de Java 17)
-          docker build --pull -t ${{ steps.image.outputs.tag }} .
+          # ✅ --pull: descargar imágenes base frescas (evita caché de Java 17)
+          # ✅ --no-cache: no reusar capas cached de builds anteriores
+          docker build --pull --no-cache -t ${{ steps.image.outputs.tag }} .
           docker push ${{ steps.image.outputs.tag }}
 
       # ===== 7. Deploy a Cloud Run con secrets inyectados =====
