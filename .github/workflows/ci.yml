@@ -39,7 +39,7 @@ jobs:
 
       - name: 🐳 Configure Docker for GAR
         run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+          echo "${{ steps.auth.outputs.access_token }}" | docker login -u oauth2accesstoken --password-stdin ${{ env.GCP_REGION }}-docker.pkg.dev
       - name: 🏷️ Generate image tag
         id: image
         run: |
