@@ -31,7 +31,7 @@ jobs:
         with:
           workload_identity_provider: 'projects/272814233394/locations/global/workloadIdentityPools/github-pool/providers/github-provider-v2'
           service_account: 'flytrack-github-deployer@flytrack-494515.iam.gserviceaccount.com'
-         # ✅ token_format REMOVIDO (usa el default, más compatible)
+          token_format: 'access_token' 
           audience: 'https://github.com/laumcs21/FlyTrack-backend'
 
       - name: 🛠️ Setup Cloud SDK
