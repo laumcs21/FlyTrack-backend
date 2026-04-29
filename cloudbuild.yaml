@@ -1,29 +1,33 @@
 # cloudbuild.yaml - Pipeline CI/CD para FlyTrack Backend
-# Mejores prácticas: tests, build multi-stage, cache, deploy seguro, health check
-
 steps:
   # ===== 1. Compilación y Pruebas Unitarias =====
   - name: 'maven:3.9-eclipse-temurin-21'
     id: build-and-test
     entrypoint: 'mvn'
     args: ['clean', 'verify', '-B']
-    # 'verify' compila, ejecuta tests unitarios y empaqueta.
-    # Si algún test falla, el pipeline se detiene aquí (CI correcto).
 
-  # ===== 2. Build de Imagen Docker =====
+  # ===== 2. Configurar Docker para Artifact Registry =====
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: configure-docker
+    entrypoint: 'gcloud'
+    args:
+      - 'auth'
+      - 'configure-docker'
+      - '${_REGION}-docker.pkg.dev'
+      - '--quiet'
+
+  # ===== 3. Build de Imagen Docker =====
   - name: 'gcr.io/cloud-builders/docker'
     id: build-image
     args:
       - 'build'
       - '-t'
       - '${_ARTIFACT_REGISTRY}/${_SERVICE_NAME}:${SHORT_SHA}'
-      - '--cache-from'
-      - '${_ARTIFACT_REGISTRY}/${_SERVICE_NAME}:latest'
       - '--pull'
       - '.'
-    waitFor: ['build-and-test']
+    waitFor: ['build-and-test', 'configure-docker']
 
-  # ===== 3. Push a Artifact Registry =====
+  # ===== 4. Push a Artifact Registry =====
   - name: 'gcr.io/cloud-builders/docker'
     id: push-image
     args:
@@ -31,7 +35,7 @@ steps:
       - '${_ARTIFACT_REGISTRY}/${_SERVICE_NAME}:${SHORT_SHA}'
     waitFor: ['build-image']
 
-  # ===== 4. Tag 'latest' para caché futuro =====
+  # ===== 5. Tag 'latest' para caché futuro =====
   - name: 'gcr.io/cloud-builders/docker'
     id: tag-latest
     args:
@@ -47,7 +51,7 @@ steps:
       - '${_ARTIFACT_REGISTRY}/${_SERVICE_NAME}:latest'
     waitFor: ['tag-latest']
 
-  # ===== 5. Despliegue a Cloud Run =====
+  # ===== 6. Despliegue a Cloud Run =====
   - name: 'gcr.io/cloud-builders/gcloud'
     id: deploy-cloud-run
     entrypoint: 'gcloud'
@@ -70,7 +74,7 @@ steps:
       - '--update-labels=app=flytrack,env=prod,commit-sha=${SHORT_SHA},deployed-by=cloud-build'
     waitFor: ['push-latest']
 
-  # ===== 6. Verificación de Salud (Health Check) =====
+  # ===== 7. Verificación de Salud =====
   - name: 'gcr.io/cloud-builders/gcloud'
     id: verify-deployment
     entrypoint: 'bash'
@@ -91,16 +95,15 @@ steps:
         exit 1
     waitFor: ['deploy-cloud-run']
 
-# ===== Variables por defecto =====
+# ===== Variables =====
 substitutions:
   _REGION: us-central1
   _SERVICE_NAME: flytrack-backend
   _ARTIFACT_REGISTRY: us-central1-docker.pkg.dev/flytrack-494515/flytrack-images
 
-# ===== Opciones de rendimiento =====
+# ===== Opciones =====
 options:
   logging: CLOUD_LOGGING_ONLY
-  dynamic_substitutions: true
-  machineType: 'E2_HIGHCPU_8'  # Más rápido para builds Java/Maven
+  machineType: 'E2_HIGHCPU_8'
 
-timeout: '1200s'  # 20 minutos máximo
+timeout: '1200s'
