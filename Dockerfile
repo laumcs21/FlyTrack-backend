@@ -7,7 +7,7 @@ COPY pom.xml .
 COPY src ./src
 
 # Compilar la aplicación (sin tests para velocidad)
-RUN mvn clean package -DskipTests -B
+RUN mvn clean verify -B
 
 # ===== STAGE 2: Runtime ligero con JRE =====
 FROM eclipse-temurin:21-jre AS runner
